@@ -6,7 +6,6 @@ require 'active_support/inflector'
 class SQLObject
 
 
-
   def self.columns
     # ...
    return @columns if @columns
@@ -22,9 +21,13 @@ class SQLObject
   end
 
   def self.finalize!
-    @columns.each do |unit|
+    self.columns.each do |unit|
       define_method(unit) do
-        
+        self.attributes[unit]
+      end
+
+      define_method("#{unit}=") do |val|
+        self.attributes[unit] = val
       end
     end
   end
@@ -42,11 +45,22 @@ class SQLObject
 
   def self.all
     # ...
+    # DBConnection.execute(<<-SQL, self.table_name)
+    #   SELECT
+    #     *
+    #   FROM
+    #     (#{self.table_name})
+    # SQL
 
   end
 
   def self.parse_all(results)
     # ...
+    results.each do |k, v|
+      params = {}
+      self.new(params)
+    end
+
   end
 
   def self.find(id)
@@ -55,6 +69,14 @@ class SQLObject
 
   def initialize(params = {})
     # ...
+    params.each do |k,v|
+      k = k.to_sym
+      if self.class.columns.include?(k)
+        self.send("#{k}=", v)
+      else
+        raise "unknown attribute '#{k}'"
+      end
+    end
   end
 
   def attributes
